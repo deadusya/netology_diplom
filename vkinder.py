@@ -26,7 +26,7 @@ from vk_api.longpoll import VkLongPoll, VkEventType, Event
 from vk_api.utils import get_random_id
 
 from db import Db
-from vkapi import VkApi
+from vkapi import VkApi, VkError
 from utils import ParseError, make_parse_city, parse_age, parse_sex
 
 logger = logging.getLogger(__name__)
@@ -40,6 +40,8 @@ help_msg = (
 age_msg = "Напиши мне свой возраст"
 city_msg = "В каком городе ты живешь?"
 sex_msg = "Чуть не забыл!😄 Напиши мне свой пол (м/ж)"
+no_offer_msg = "Не нашлось кандидатов, попробуйте позже."
+error_msg = "Произошла ошибка. Мы уже работаем над ее исправлением."
 
 
 class VkinderBot:
@@ -57,11 +59,19 @@ class VkinderBot:
                 if event.to_me:
                     if self.state.get(event.user_id) is None:
                         self.state[event.user_id] = None
-                    try:
-                        self.handle_message(event)
-                    except:
-                        self.write_msg(event.user_id, "Что-то пошло не так")
-                        logger.exception("При обработке сообщения произошла ошибка")
+                    self.try_handle_message(event)
+
+    def try_handle_message(self, event):
+        """Метод для отлова ошибок вконтакте, при такой ошибке
+        мы можем только отправить сообщение об ошибке
+        """
+        try:
+            self.handle_message(event)
+        except VkError:
+            self.handle_error(self, event.user_id)
+
+    def handle_error(self, user_id):
+        self.write_msg(user_id, text=error_msg)
 
     def handle_message(self, event: Event):
         """Обработчик новых сообщений"""
@@ -120,13 +130,16 @@ class VkinderBot:
 
     def search_friends(self, user_id):
         offer = self.api.search_new_friend(user_id)
-        attachment = ",".join(
-            map(lambda p: f'{"photo"}{offer["id"]}_{p["id"]}', offer["photos"])
-        )
-        link = f'https://vk.com/id{offer["id"]}'
-        name = f'{offer.get("first_name")}'
-        text = f"{name}\n{link}\n\n"
-        self.write_msg(user_id, text=text, attachment=attachment)
+        if offer:
+            attachment = ",".join(
+                map(lambda p: f'{"photo"}{offer["id"]}_{p["id"]}', offer["photos"])
+            )
+            link = f'https://vk.com/id{offer["id"]}'
+            name = f'{offer.get("first_name")}'
+            text = f"{name}\n{link}\n\n"
+            self.write_msg(user_id, text=text, attachment=attachment)
+        else:
+            self.write_msg(user_id, text=no_offer_msg)
 
     def process_greeting(self, event: Event):
         name = self.api.get_user(event.user_id)["first_name"]

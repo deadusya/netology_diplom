@@ -1,10 +1,29 @@
 import psycopg2
 
+init_sql = """
+CREATE TABLE IF NOT EXISTS users (
+    id bigint PRIMARY KEY,
+    age INT,
+    sex INT,
+    city INT
+);
+
+CREATE TABLE IF NOT EXISTS shownusers (
+    id bigint PRIMARY KEY,
+    user_id bigint REFERENCES users (id)
+);
+"""
 
 class Db:
     """Клас, в котором собраны методы для работы с базой данных"""
     def __init__(self, dsn):
         self._dsn = dsn
+
+    def init(self):
+        with psycopg2.connect(self._dsn) as conn:
+            with conn.cursor() as curs:
+                curs.execute(init_sql)
+
 
     def create_user(self, user: dict):
         """Сохраняет пользователя и возвращает его же"""

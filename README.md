@@ -2,7 +2,7 @@
 
 ## Настройка
 
-В файл config.py установите значения для переменных
+В файле config.py установите значения для переменных
 
 -   GROUP_TOKEN="токен группы вк"
 -   USER_TOKEN="токен пользователя вк"
@@ -23,10 +23,7 @@ https://oauth.vk.com/authorize?client_id=51603996&display=page&redirect_uri=http
 ```shell
 pip install -r requirements.txt
 ```
-### Создание таблиц в базе данных
-```shell
-python3.10 migrate.py migrations/create_tables.sql
-```
+
 ### Запуск
 ```shell
 python3.10 main.py
